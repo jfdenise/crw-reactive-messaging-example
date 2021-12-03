@@ -8,7 +8,7 @@ projects:
     source:
       type: git
       branch: main
-      location: "https://github.com/jfdenise/microprofile-reactive-v2-qs.git"
+      location: "https://github.com/jfdenise/crw-reactive-messaging-example.git"
 components:
   -
     type: chePlugin
