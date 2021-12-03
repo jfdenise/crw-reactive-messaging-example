@@ -5,8 +5,8 @@ mp.messaging.connector.smallrye-kafka.security.protocol=${securityProtocol},\
 mp.messaging.connector.smallrye-kafka.sasl.mechanism=${saslMechanism},\
 mp.messaging.connector.smallrye-kafka.sasl.jaas.config="\n\
 org.apache.kafka.common.security.plain.PlainLoginModule required\n\
-username=${user}\n\
-password=${password};"\
+username=\"${user}\"\n\
+password=\"${password}\";"\
 })
 
 /subsystem=microprofile-config-smallrye/config-source=rhosak-binding:add(dir={path=/bindings/kafka-config})
