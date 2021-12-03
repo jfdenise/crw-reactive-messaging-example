@@ -1,0 +1,85 @@
+---
+apiVersion: 1.0.0
+metadata:
+  generateName: java-wildfly-maven-
+projects:
+  -
+    name: microprofile-reactive-example
+    source:
+      type: git
+      branch: main
+      location: "https://github.com/jfdenise/microprofile-reactive-v2-qs.git"
+components:
+  -
+    type: chePlugin
+    id: redhat/java11/latest
+  -
+    # NOTE: instead of the old stack-analysis script, should be able to use the latest dependency-analysis plugin instead
+    type: chePlugin
+    id: redhat/dependency-analytics/latest
+  -
+    type: dockerimage
+    alias: maven
+    image: quay.io/jfdenise/wildfly-s2i-jdk11
+    env:
+      - name: MAVEN_OPTS
+        value: "-Xmx200m -XX:+UseParallelGC -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xms20m -Djava.security.egd=file:/dev/./urandom -Duser.home=/home/jboss"
+      - name: JAVA_OPTS_APPEND
+        value: "-Xrunjdwp:transport=dt_socket,address=8000,server=y,suspend=n -Dsun.util.logging.disableCallerCheck=true"
+      - value: '-Dmaven.repo.local=/home/jboss/.m2/repository/repository -Dcom.redhat.xpaas.repo.jbossorg'
+        name: MVN_ARGS_APPEND
+      - name: JBOSS_HOME
+        value: /projects/microprofile-reactive-example/target/server
+    memoryLimit: 1024Mi
+    endpoints:
+      - name: 'wildfly'
+        port: 8080
+      - name: 'jgroups'
+        port: 7600
+        attributes:
+          public: 'false'
+    mountSources: true
+    command: ['sleep', 'infinity']
+    volumes:
+      - name: m2
+        containerPath: /home/jboss/.m2/repository
+commands:
+  -
+    name: 1. Package server and app
+    actions:
+      - workdir: '${CHE_PROJECTS_ROOT}/microprofile-reactive-example'
+        type: exec
+        command: mvn ${MVN_ARGS_APPEND} clean package -Popenshift
+        component: maven
+  -
+    name: 2. Run server
+    actions:
+      - workdir: '/'
+        type: exec
+        command: /usr/local/s2i/run
+        component: maven
+  -
+    name: 3. Hot update
+    actions:
+      -
+        type: exec
+        component: maven
+        command: "mvn ${MVN_ARGS_APPEND} wildfly:deploy -Dwildfly.package.skip=true -Popenshift"
+        workdir:  ${CHE_PROJECTS_ROOT}/microprofile-reactive-example
+  -
+    name: Debug (Attach)
+    actions:
+    - type: vscode-launch
+      referenceContent: |
+        {
+        "version": "0.2.0",
+        "configurations": [
+        {
+            "type": "java",
+            "request": "attach",
+            "name": "Debug (Attach)",
+            "hostName": "localhost",
+            "port": 8000
+        }
+        ]
+        }
